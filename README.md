@@ -18,7 +18,7 @@ To connect via websocket, the url should be in the following format:
 ```
 localhost:8080/ws?username={insertusernamehere}
 ```
-usernames are passed in as a url query parameter.
+Usernames are passed in as a url query parameter.
 
 ### Testing
 To test, I recommend installing wscat via npm and connecting using urls as listed above.

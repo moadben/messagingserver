@@ -1,3 +1,5 @@
+// main.go contains the main function that listens and serves for our server,
+// and the functions that listen on a websocket.
 package main
 
 import (

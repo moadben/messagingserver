@@ -1,3 +1,5 @@
+// Server.go contains all code related to server and peer related objects, and
+// their respective methods, helper functions, and constructors.
 package main
 
 import (
