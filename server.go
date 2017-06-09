@@ -54,6 +54,20 @@ func grabUser(u *User, m Message) (User, error) {
 	return val, err
 }
 
+// Helper function to check for legitimate connection between two peers
+func checkConn(peerOne *User, peerTwo *User) bool {
+	emptyDescription := Description{}
+	peerOneConn := peerOne.Connections[peerTwo.Username]
+	peerTwoConn := peerTwo.Connections[peerOne.Username]
+	if peerOneConn.LocalDescription == peerTwoConn.RemoteDescription &&
+		peerOneConn.RemoteDescription == peerTwoConn.LocalDescription &&
+		peerOneConn.RemoteDescription != emptyDescription &&
+		peerOneConn.LocalDescription != emptyDescription {
+		return true
+	}
+	return false
+}
+
 // SetLocalDescription sets the local description of a connection between
 // two peers
 func (u *User) SetLocalDescription(m Message) Description {
@@ -120,9 +134,14 @@ func (u *User) SendMessage(m Message) (Message, error) {
 		return newMessage, errors.New("User not found")
 	}
 
-	// Create the message
-	newMessage = Message{"message", val.Username, m.Payload, Description{}}
-	return newMessage, nil
+	// See if there is a legitimate connection between the two peers
+	if checkConn(u, &val) {
+		// Create the message
+		newMessage = Message{"message", val.Username, m.Payload, Description{}}
+		return newMessage, nil
+	}
+	// Otherwise return an error
+	return newMessage, errors.New("No connection between peers")
 }
 
 // CreateServer creates a new server object
