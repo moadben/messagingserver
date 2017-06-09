@@ -11,20 +11,37 @@ type Server struct {
 	Users map[string]User
 }
 
+// Description stores a description that accompanies an offer/answer
+type Description struct {
+	User      string
+	Recipient string
+	Type      string
+}
+
 // Message holds a message that is read from a websocket
 type Message struct {
 	Type      string
 	Recipient string
 	Payload   string
+	SDP       Description
+}
+
+// Connection stores the local and remote descriptions of a connection
+// between two peers
+type Connection struct {
+	LocalDescription  Description
+	RemoteDescription Description
 }
 
 // User holds the username and websocket for a new client
 type User struct {
-	Username string
-	Socket   *websocket.Conn
-	Server   *Server
+	Username    string
+	Socket      *websocket.Conn
+	Server      *Server
+	Connections map[string]Connection
 }
 
+// Helper function to check if user exists and return it
 func grabUser(u *User, m Message) (User, error) {
 	var val User
 	var ok bool
@@ -37,6 +54,26 @@ func grabUser(u *User, m Message) (User, error) {
 	return val, err
 }
 
+// SetLocalDescription sets the local description of a connection between
+// two peers
+func (u *User) SetLocalDescription(m Message, mType string) Description {
+	localDescription := Description{
+		User:      u.Username,
+		Recipient: m.Recipient,
+		Type:      mType,
+	}
+	remoteDescription := u.Connections[m.Recipient].RemoteDescription
+	u.Connections[m.Recipient] = Connection{LocalDescription: localDescription, RemoteDescription: remoteDescription}
+	return localDescription
+}
+
+// SetRemoteDescription sets the remote description of a connection between
+// two peers
+func (u *User) SetRemoteDescription(m Message) {
+	localDescription := u.Connections[m.SDP.User].LocalDescription
+	u.Connections[m.SDP.User] = Connection{LocalDescription: localDescription, RemoteDescription: m.SDP}
+}
+
 // CreateOffer takes the message and creates an Offer for the
 // respective user
 func (u *User) CreateOffer(m Message) (Message, error) {
@@ -47,9 +84,10 @@ func (u *User) CreateOffer(m Message) (Message, error) {
 	if err != nil {
 		return newOffer, errors.New("User not found")
 	}
-
+	// Set Local Description
+	description := u.SetLocalDescription(m, "offer")
 	// Create an offer request
-	newOffer = Message{"offerRequest", val.Username, u.Username + " Wants to create a connection"}
+	newOffer = Message{"offerRequest", val.Username, u.Username + " Wants to create a connection", description}
 	return newOffer, nil
 }
 
@@ -64,8 +102,10 @@ func (u *User) CreateAnswer(m Message) (Message, error) {
 		return newAnswer, errors.New("User not found")
 	}
 
+	// Set Local Description
+	description := u.SetLocalDescription(m, "answer")
 	// Create an answer response
-	newAnswer = Message{"answerResponse", val.Username, u.Username + " Accepts your connection"}
+	newAnswer = Message{"answerResponse", val.Username, "accept offer", description}
 	return newAnswer, nil
 }
 
@@ -81,7 +121,7 @@ func (u *User) SendMessage(m Message) (Message, error) {
 	}
 
 	// Create the message
-	newMessage = Message{"message", val.Username, m.Payload}
+	newMessage = Message{"message", val.Username, m.Payload, Description{}}
 	return newMessage, nil
 }
 

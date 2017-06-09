@@ -17,7 +17,7 @@ func SocketServe(s *Server, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	// Create a new user object
-	newUser := User{Socket: conn, Username: values["username"][0], Server: s}
+	newUser := User{Socket: conn, Username: values["username"][0], Server: s, Connections: make(map[string]Connection)}
 	s.Users[newUser.Username] = newUser
 
 	Listen(&newUser)
@@ -53,6 +53,10 @@ func Listen(user *User) {
 			if err = user.Server.Users[offer.Recipient].Socket.WriteJSON(offer); err != nil {
 				fmt.Println(err)
 				continue
+			} else {
+				// Set Remote Description for recipient
+				u := user.Server.Users[offer.Recipient]
+				u.SetRemoteDescription(offer)
 			}
 
 		// if user wants to answer an offer
@@ -65,7 +69,12 @@ func Listen(user *User) {
 			if err = user.Server.Users[answer.Recipient].Socket.WriteJSON(answer); err != nil {
 				fmt.Println(err)
 				continue
+			} else {
+				// Set Remote Description for offer-er
+				u := user.Server.Users[answer.Recipient]
+				u.SetRemoteDescription(answer)
 			}
+
 		// if user wants to send a message
 		case m.Type == "message":
 			message, err := user.SendMessage(m)
