@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -15,8 +16,75 @@ func SocketServe(s *Server, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	newUser := User{Socket: conn, Username: values["username"][0]}
+	// Create a new user object
+	newUser := User{Socket: conn, Username: values["username"][0], Server: s}
 	s.Users[newUser.Username] = newUser
+
+	Listen(&newUser)
+}
+
+// Listen listens on a websocket in a new goroutine and sends/reads messages.
+func Listen(user *User) {
+	// Defer closing of socket in case of emergency exit
+	defer func() {
+		delete(user.Server.Users, user.Username)
+		user.Socket.Close()
+	}()
+
+	// infinite loop to read from opened socket
+	for {
+		// Read the message
+		m := Message{}
+		err := user.Socket.ReadJSON(&m)
+		if err != nil {
+			fmt.Println("Error reading json.", err)
+			continue
+		}
+
+		//Switch statement to check message type and react accordingly
+		switch {
+		// if user wants to make an offer
+		case m.Type == "offer":
+			offer, err := user.CreateOffer(m)
+			if err != nil {
+				fmt.Println("Error creating offer", err)
+				continue
+			}
+			if err = user.Server.Users[offer.Recipient].Socket.WriteJSON(offer); err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+		// if user wants to answer an offer
+		case m.Type == "answer":
+			answer, err := user.CreateAnswer(m)
+			if err != nil {
+				fmt.Println("Error creating answer", err)
+				continue
+			}
+			if err = user.Server.Users[answer.Recipient].Socket.WriteJSON(answer); err != nil {
+				fmt.Println(err)
+				continue
+			}
+		// if user wants to send a message
+		case m.Type == "message":
+			message, err := user.SendMessage(m)
+			if err != nil {
+				fmt.Println("Error creating message", err)
+				continue
+			}
+			if err = user.Server.Users[message.Recipient].Socket.WriteJSON(message); err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+		// if user wants to disconnect
+		case m.Type == "logout":
+			delete(user.Server.Users, user.Username)
+			user.Socket.Close()
+			return
+		}
+	}
 }
 
 func main() {
