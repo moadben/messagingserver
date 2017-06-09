@@ -10,7 +10,7 @@ Prerequisites: A running Go installation
 
 If you have Go installed locally, simply run:
 ```
-go run *go
+go run *.go
 ```
 in the cloned repository and the server will start up on port :8080
 
@@ -24,3 +24,4 @@ usernames are passed in as a url query parameter.
 To test, I recommend installing wscat via npm and connecting using urls as listed above.
 
 ## Issues
+Currently, the setting of remote descriptions occurs after an offer successfully reaches its destinations, this should instead be handled in the front-end client when a user accepts a connection
