@@ -77,7 +77,7 @@ func Listen(user *User) {
 
 		// if user wants to send a message
 		case m.Type == "message":
-			message, err := user.SendMessage(m)
+			message, err := user.CreateMessage(m)
 			if err != nil {
 				fmt.Println("Error creating message", err)
 				continue
@@ -87,6 +87,17 @@ func Listen(user *User) {
 				continue
 			}
 
+		// if users want to exchange ICE candiates
+		case m.Type == "ice-candidate":
+			message, err := user.CreateICECandidate(m)
+			if err != nil {
+				fmt.Println("Error creating message", err)
+				continue
+			}
+			if err = user.Server.Users[message.Recipient].Socket.WriteJSON(message); err != nil {
+				fmt.Println(err)
+				continue
+			}
 		// if user wants to disconnect
 		case m.Type == "logout":
 			delete(user.Server.Users, user.Username)

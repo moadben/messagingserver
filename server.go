@@ -59,6 +59,7 @@ func checkConn(peerOne *User, peerTwo *User) bool {
 	emptyDescription := Description{}
 	peerOneConn := peerOne.Connections[peerTwo.Username]
 	peerTwoConn := peerTwo.Connections[peerOne.Username]
+
 	if peerOneConn.LocalDescription == peerTwoConn.RemoteDescription &&
 		peerOneConn.RemoteDescription == peerTwoConn.LocalDescription &&
 		peerOneConn.RemoteDescription != emptyDescription &&
@@ -101,7 +102,7 @@ func (u *User) CreateOffer(m Message) (Message, error) {
 	// Set Local Description
 	description := u.SetLocalDescription(m)
 	// Create an offer request
-	newOffer = Message{"offerRequest", val.Username, u.Username + " Wants to create a connection", description}
+	newOffer = Message{"offer-request", val.Username, u.Username + " Wants to create a connection", description}
 	return newOffer, nil
 }
 
@@ -119,13 +120,13 @@ func (u *User) CreateAnswer(m Message) (Message, error) {
 	// Set Local Description
 	description := u.SetLocalDescription(m)
 	// Create an answer response
-	newAnswer = Message{"answerResponse", val.Username, "accept offer", description}
+	newAnswer = Message{"answer-response", val.Username, "accept offer", description}
 	return newAnswer, nil
 }
 
-// SendMessage takes the message and creates a message for the
+// CreateMessage takes the message and creates a message for the
 // respective user
-func (u *User) SendMessage(m Message) (Message, error) {
+func (u *User) CreateMessage(m Message) (Message, error) {
 	var newMessage Message
 
 	// Check to see if user exists
@@ -142,6 +143,28 @@ func (u *User) SendMessage(m Message) (Message, error) {
 	}
 	// Otherwise return an error
 	return newMessage, errors.New("No connection between peers")
+}
+
+// CreateICECandidate takes the message and creates a message for the
+// respective user
+func (u *User) CreateICECandidate(m Message) (Message, error) {
+	var newCandidate Message
+
+	// Check to see if user exists
+	val, err := grabUser(u, m)
+	if err != nil {
+		return newCandidate, errors.New("User not found")
+	}
+
+	// See if there is a legitimate connection between the two peers
+	if checkConn(u, &val) {
+		// Create the message
+		m.Payload = ("Connection Info Placeholder")
+		newCandidate = Message{"ice-candidate", val.Username, m.Payload, Description{}}
+		return newCandidate, nil
+	}
+	// Otherwise return an error
+	return newCandidate, errors.New("No connection between peers")
 }
 
 // CreateServer creates a new server object
