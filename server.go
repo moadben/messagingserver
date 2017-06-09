@@ -56,11 +56,11 @@ func grabUser(u *User, m Message) (User, error) {
 
 // SetLocalDescription sets the local description of a connection between
 // two peers
-func (u *User) SetLocalDescription(m Message, mType string) Description {
+func (u *User) SetLocalDescription(m Message) Description {
 	localDescription := Description{
 		User:      u.Username,
 		Recipient: m.Recipient,
-		Type:      mType,
+		Type:      m.Type,
 	}
 	remoteDescription := u.Connections[m.Recipient].RemoteDescription
 	u.Connections[m.Recipient] = Connection{LocalDescription: localDescription, RemoteDescription: remoteDescription}
@@ -85,7 +85,7 @@ func (u *User) CreateOffer(m Message) (Message, error) {
 		return newOffer, errors.New("User not found")
 	}
 	// Set Local Description
-	description := u.SetLocalDescription(m, "offer")
+	description := u.SetLocalDescription(m)
 	// Create an offer request
 	newOffer = Message{"offerRequest", val.Username, u.Username + " Wants to create a connection", description}
 	return newOffer, nil
@@ -103,7 +103,7 @@ func (u *User) CreateAnswer(m Message) (Message, error) {
 	}
 
 	// Set Local Description
-	description := u.SetLocalDescription(m, "answer")
+	description := u.SetLocalDescription(m)
 	// Create an answer response
 	newAnswer = Message{"answerResponse", val.Username, "accept offer", description}
 	return newAnswer, nil
